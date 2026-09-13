@@ -1,7 +1,7 @@
 ---
 title: "Artifact Catalog: One Owner for Every Artifact Location"
 date: "2026-09-13"
-status: "draft"
+status: "complete"
 request: "Artifact catalog: give every Artifact one owner (architecture review candidate A). Design decisions already taken in research/2026-09-13_artifact-catalog-design-grill.md and docs/adr/0001-artifact-catalog-owns-locations.md; glossary in CONTEXT.md."
 plan_type: "multi-phase"
 research_inputs:
@@ -420,13 +420,13 @@ repo today (the transition test) so later phases can prove they moved
 knowledge without changing it.
 
 **Tasks**
-- [ ] TASK-01-01: Create `R/artifact_catalog.R` with the header comment
+- [x] TASK-01-01: Create `R/artifact_catalog.R` with the header comment
   explaining the module's role (one owner for Artifact locations; consumers
   never spell a path), a private `.artifact_rows_engagement(cfg)` returning
   the engagement-scoped rows of S1 and a private `.artifact_rows_sector(cfg, sector)`
   returning the sector-scoped rows for one sector, and the three exported
   functions below. Use only base R and `jsonlite`. No top-level side effects.
-- [ ] TASK-01-02: Implement `artifact_catalog(cfg)`: bind engagement rows,
+- [x] TASK-01-02: Implement `artifact_catalog(cfg)`: bind engagement rows,
   then for each `sector in cfg$trisk_sectors` the sector rows; enforce
   column order of S1; stop with `"artifact_catalog: duplicate key(s): ..."`
   if any `(key, sector)` pair repeats; stop with
@@ -435,7 +435,7 @@ knowledge without changing it.
   `snapshot_dir`, `reports_dir`, `engagement_output_dir`,
   `financed_emissions_output_dir`, `prioritization_output_dir`,
   `letters_output_dir`, `disclosure_output_dir`.
-- [ ] TASK-01-03: Implement `artifact_path(cfg, key, sector = NULL, where = c("output", "snapshot"))`.
+- [x] TASK-01-03: Implement `artifact_path(cfg, key, sector = NULL, where = c("output", "snapshot"))`.
   `where = "output"` returns `path`; `where = "snapshot"` returns
   `snapshot_path` and stops with `"artifact_path: '<key>' has no snapshot location"`
   when it is NA. For a sector-scoped key with `sector = NULL`, return the
@@ -444,9 +444,9 @@ knowledge without changing it.
   engagement-scoped key with a non-NULL `sector`, stop with
   `"artifact_path: '<key>' is not sector-scoped"`. Unknown key: stop with
   `"artifact_path: unknown artifact key '<key>' (known: ...)"`.
-- [ ] TASK-01-04: Implement `write_artifact_catalog_json(cfg, path)` per S3,
+- [x] TASK-01-04: Implement `write_artifact_catalog_json(cfg, path)` per S3,
   creating the parent directory, returning `invisible(path)`.
-- [ ] TASK-01-05: Create `tests/testthat/test_artifact_catalog.R` with the
+- [x] TASK-01-05: Create `tests/testthat/test_artifact_catalog.R` with the
   Test Specs below. The transition test lists, verbatim, every path literal
   from: `R/step_registry.R:41-46`, `scripts/refresh_dashboard_data.R`
   (PACTA six, TRISK fourteen with the `input_root` split for `assets.csv`,
@@ -458,10 +458,10 @@ knowledge without changing it.
   `tests/testthat/test_snapshot_contract.R:4-13`, resolved for `mcb-demo`.
   Mark the test with a comment `# TRANSITION TEST -- delete in PHASE-05 once
   every consumer reads the catalog.`
-- [ ] TASK-01-06: Run `Rscript -e "roxygen2::roxygenise()"`; confirm
+- [x] TASK-01-06: Run `Rscript -e "roxygen2::roxygenise()"`; confirm
   `NAMESPACE` gains `export(artifact_catalog)`, `export(artifact_path)`,
   `export(write_artifact_catalog_json)` and `man/` gains three `.Rd` files.
-- [ ] TASK-01-07: Run the full R suite and the invariants gate; both green.
+- [x] TASK-01-07: Run the full R suite and the invariants gate; both green.
 
 **File Changes**
 - `R/artifact_catalog.R` (create): the module described in TASK-01-01..04.
@@ -501,11 +501,11 @@ knowledge without changing it.
 - None (new module; nothing consumes it yet).
 
 **Exit Criteria**
-- [ ] `Rscript -e "testthat::test_file('tests/testthat/test_artifact_catalog.R')"` reports `FAIL 0`.
-- [ ] `Rscript -e "testthat::test_dir('tests/testthat')"` reports `FAIL 0`.
-- [ ] `Rscript -e "roxygen2::roxygenise()"` leaves `git diff --stat NAMESPACE` showing exactly three added lines.
-- [ ] `Rscript -e "devtools::load_all('.')"` succeeds.
-- [ ] `git status --porcelain synthesis_output dashboard/data reports` is empty (no artifact touched).
+- [x] `Rscript -e "testthat::test_file('tests/testthat/test_artifact_catalog.R')"` reports `FAIL 0`.
+- [x] `Rscript -e "testthat::test_dir('tests/testthat')"` reports `FAIL 0`.
+- [x] `Rscript -e "roxygen2::roxygenise()"` leaves `git diff --stat NAMESPACE` showing exactly three added lines.
+- [x] `Rscript -e "devtools::load_all('.')"` succeeds.
+- [x] `git status --porcelain synthesis_output dashboard/data reports` is empty (no artifact touched).
 
 **Phase Risks**
 - **RISK-01-01:** The "declaration matches the tree" test fails on a
@@ -526,7 +526,7 @@ sidecar ask the catalog. Step order, arguments, dependency edges and every
 output stay byte-identical.
 
 **Tasks**
-- [ ] TASK-02-01: In `R/step_registry.R`, delete lines 41-46 (the six
+- [x] TASK-02-01: In `R/step_registry.R`, delete lines 41-46 (the six
   closures). Add `requires = c(...)` (keys per S2 item 4) to the entries that
   declare `requires_fn` today and delete every `produces_fn`/`requires_fn`
   field from the literal entries. Replace the three
@@ -535,33 +535,33 @@ output stay byte-identical.
   `args_fn` with `artifact_path(cfg, "intake_validation_report")`,
   `artifact_path(cfg, "coverage_report")` and
   `artifact_path(cfg, "vintage_comparison_report")`.
-- [ ] TASK-02-02: In `step_registry()`, after the `list(...)` is built,
+- [x] TASK-02-02: In `step_registry()`, after the `list(...)` is built,
   apply S2 items 2-3: a private `.attach_dependency_fns(registry)` that adds
   `produces_fn` (when the catalog has rows for that producer) and
   `requires_fn` (when `requires` is non-empty) closures to each entry and
   returns the registry. Update the file header (lines 22-29) to say
   dependencies are declared by artifact key and resolved through
   `R/artifact_catalog.R`.
-- [ ] TASK-02-03: In `R/engagement_plan.R:191-195`, replace the manifest
+- [x] TASK-02-03: In `R/engagement_plan.R:191-195`, replace the manifest
   path branch with `manifest_path <- artifact_path(cfg, "pipeline_manifest")`.
   Keep the explanatory comment, pointing at the catalog row.
-- [ ] TASK-02-04: In `plan_engagement_run()`, after `steps` are resolved and
+- [x] TASK-02-04: In `plan_engagement_run()`, after `steps` are resolved and
   before the dependency validation, add: if `length(cfg$row_count_files) > 0`,
   compute `known <- na.omit(artifact_catalog(cfg)$snapshot_path)` and stop
   with `"plan_engagement_run: row_count_files entry '<x>' is not a catalogued Snapshot artifact"`
   for the first entry not in `known`.
-- [ ] TASK-02-05: In `scripts/run_engagement.R`, add
+- [x] TASK-02-05: In `scripts/run_engagement.R`, add
   `source("R/artifact_catalog.R")` immediately after
   `source("R/engagement_config.R")` (line 56). Do the same in every script
   that sources `R/step_registry.R` or `R/engagement_plan.R` (check with
   `grep -rn "step_registry.R\|engagement_plan.R" scripts tools tests`).
-- [ ] TASK-02-06: In `scripts/pacta_vietnam_scenario.R:83-96`, add
+- [x] TASK-02-06: In `scripts/pacta_vietnam_scenario.R:83-96`, add
   `source("R/artifact_catalog.R")` next to the existing `source()` calls and
   replace both `file.path(cfg$paths$pacta_output_dir, "02_vn_matched_prioritized.csv")`
   occurrences with `artifact_path(cfg, "matches")` and
   `file.path(cfg$paths$reports_dir, "PACTA_Vietnam_Bank_Report.html")` with
   `artifact_path(cfg, "pacta_bank_report")`.
-- [ ] TASK-02-07: In `tests/testthat/test_step_dependencies.R`,
+- [x] TASK-02-07: In `tests/testthat/test_step_dependencies.R`,
   `test_step_registry.R` and `test_engagement_plan.R`, add
   `source(file.path(root, "R", "artifact_catalog.R"))` after the
   `engagement_config.R` source line. Add one new test to
@@ -573,10 +573,10 @@ output stay byte-identical.
   `row_count_files = "dashboard/data/nope.csv"` is refused by
   `plan_engagement_run()` with the message above; the real `mcb-demo`
   config plans clean.
-- [ ] TASK-02-08: Run `Rscript scripts/run_engagement.R --config engagements/mcb-demo/engagement_config.json --dry-run`
+- [x] TASK-02-08: Run `Rscript scripts/run_engagement.R --config engagements/mcb-demo/engagement_config.json --dry-run`
   and diff its output against the same command run at `bd09f48` (use
   `git stash` around the second run, or a second checkout): identical.
-- [ ] TASK-02-09: Run the full R suite, then `Rscript tools/verify_refactor.R`
+- [x] TASK-02-09: Run the full R suite, then `Rscript tools/verify_refactor.R`
   (full refresh) and `--invariants`.
 
 **File Changes**
@@ -609,11 +609,11 @@ output stay byte-identical.
 - PHASE-01.
 
 **Exit Criteria**
-- [ ] `grep -c "file.path(cfg\$paths\$pacta_output_dir" R/step_registry.R scripts/pacta_vietnam_scenario.R` prints `0` for both files.
-- [ ] `Rscript -e "testthat::test_dir('tests/testthat')"` reports `FAIL 0`.
-- [ ] `Rscript tools/verify_refactor.R` prints `BYTE-IDENTITY PASS`.
-- [ ] `Rscript tools/verify_refactor.R --invariants` prints `INVARIANTS PASS`.
-- [ ] `git diff --name-only -- '*.csv'` is empty after the refresh.
+- [x] `grep -c "file.path(cfg\$paths\$pacta_output_dir" R/step_registry.R scripts/pacta_vietnam_scenario.R` prints `0` for both files.
+- [x] `Rscript -e "testthat::test_dir('tests/testthat')"` reports `FAIL 0`.
+- [x] `Rscript tools/verify_refactor.R` prints `BYTE-IDENTITY PASS`.
+- [x] `Rscript tools/verify_refactor.R --invariants` prints `INVARIANTS PASS`.
+- [x] `git diff --name-only -- '*.csv'` is empty after the refresh.
 
 **Phase Risks**
 - **RISK-02-01:** `validate_step_dependencies()`'s warning text for filtered
@@ -637,14 +637,14 @@ catalog-versus-Snapshot check; `dashboard/data/artifact_catalog.json` is
 generated and committed.
 
 **Tasks**
-- [ ] TASK-03-01: In `scripts/refresh_dashboard_data.R`, add
+- [x] TASK-03-01: In `scripts/refresh_dashboard_data.R`, add
   `source("R/artifact_catalog.R")` after line 13, then
   `cat <- artifact_catalog(cfg)` after `cfg` is loaded. Delete `pacta_files`
   (lines 65-72), `trisk_sector_files` (105-120), the `input_root` branch
   (152-161) and `grid_file_names` (172); keep `report_catalog` handling
   (73-101), `trisk_manifest` construction, `clear_dir(trisk_dest)`, the
   `misses_required` mechanism and the final exit status exactly as they are.
-- [ ] TASK-03-02: Rewrite the copy loops to iterate the catalog:
+- [x] TASK-03-02: Rewrite the copy loops to iterate the catalog:
   for every row with `!is.na(snapshot_path)`: `kind == "png_group"` →
   `copy_png_group(row$path, row$snapshot_path)`; `key %in% c("trisk_manifest", "pipeline_manifest")`
   → skip (produced in place, not copied); `group == "grid"` →
@@ -656,19 +656,19 @@ generated and committed.
   → `manifest.csv` → analytics so the console log reads as before.
   `trisk_manifest$grid_available[[i]]` must still be computed from the three
   grid rows' `snapshot_path` for that sector.
-- [ ] TASK-03-03: After the analytics loop and before the `misses_required`
+- [x] TASK-03-03: After the analytics loop and before the `misses_required`
   check, add `write_artifact_catalog_json(cfg, file.path(snapshot_dir, "artifact_catalog.json"))`
   with a `message()` line `[OK] <path> written`.
-- [ ] TASK-03-04: In `scripts/record_run_history.R:22-27`, replace the
+- [x] TASK-03-04: In `scripts/record_run_history.R:22-27`, replace the
   `artifacts` vector with `artifacts <- artifact_catalog(cfg)`, filtered to
   `history_headline`, taking `$path` (add the `source()` line). Keep the
   comment about extending the list, redirected to "set `history_headline`
   on the catalog row".
-- [ ] TASK-03-05: In `scripts/generate_refresh_audit.R`, add the `source()`
+- [x] TASK-03-05: In `scripts/generate_refresh_audit.R`, add the `source()`
   line and replace line 69 with `artifact_path(cfg, "matches", where = "snapshot")`,
   line 78 with `artifact_path(cfg, "top_borrowers", sector = "power", where = "snapshot")`,
   line 87 with `artifact_path(cfg, "engagement_priority")`.
-- [ ] TASK-03-06: Rewrite the first test in `tests/testthat/test_snapshot_contract.R`
+- [x] TASK-03-06: Rewrite the first test in `tests/testthat/test_snapshot_contract.R`
   (lines 3-38) as: for `mcb-demo`, every catalog row with a non-NA
   `snapshot_path` exists under `project_root()` (`dir.exists` for
   `png_group`, `file.exists` otherwise); `dashboard/data/trisk/manifest.csv`
@@ -678,12 +678,12 @@ generated and committed.
   excluding `runs/`) is some row's `snapshot_path` or is
   `dashboard/data/trisk/manifest.csv` — an uncatalogued file fails with its
   name. Leave the second test (scenario vintages) untouched.
-- [ ] TASK-03-07: Run `Rscript scripts/pipeline_refresh.R` from the repo root
+- [x] TASK-03-07: Run `Rscript scripts/pipeline_refresh.R` from the repo root
   (native locale, not `LANG=C.UTF-8`; see Gotchas). Confirm
   `dashboard/data/artifact_catalog.json` now exists and
   `git status --porcelain` shows it as the only untracked file plus the usual
   timestamp-class changes.
-- [ ] TASK-03-08: Run `Rscript tools/verify_refactor.R --skip-refresh`
+- [x] TASK-03-08: Run `Rscript tools/verify_refactor.R --skip-refresh`
   (expect `BYTE-IDENTITY PASS`) and `--invariants`. Commit
   `dashboard/data/artifact_catalog.json` together with this phase's code.
 
@@ -710,10 +710,10 @@ generated and committed.
 - PHASE-01 (and PHASE-02 for the full refresh to run; if executed before PHASE-02, run only `refresh_dashboard_data.R` directly).
 
 **Exit Criteria**
-- [ ] `grep -c "\.csv\"" scripts/refresh_dashboard_data.R` prints `0` (no CSV basename literal remains; `report_catalog.json` and `manifest.csv` are the only literals, and `manifest.csv` is written via the `trisk_manifest` catalog row's path).
-- [ ] `test -f dashboard/data/artifact_catalog.json` succeeds and the file is tracked (`git ls-files dashboard/data/artifact_catalog.json` prints it).
-- [ ] `Rscript -e "testthat::test_dir('tests/testthat')"` reports `FAIL 0`.
-- [ ] `Rscript tools/verify_refactor.R --skip-refresh` prints `BYTE-IDENTITY PASS`; `--invariants` prints `INVARIANTS PASS`.
+- [x] `grep -c "\.csv\"" scripts/refresh_dashboard_data.R` prints `0` (no CSV basename literal remains; `report_catalog.json` and `manifest.csv` are the only literals, and `manifest.csv` is written via the `trisk_manifest` catalog row's path).
+- [x] `test -f dashboard/data/artifact_catalog.json` succeeds and the file is tracked (`git ls-files dashboard/data/artifact_catalog.json` prints it).
+- [x] `Rscript -e "testthat::test_dir('tests/testthat')"` reports `FAIL 0`.
+- [x] `Rscript tools/verify_refactor.R --skip-refresh` prints `BYTE-IDENTITY PASS`; `--invariants` prints `INVARIANTS PASS`.
 
 **Phase Risks**
 - **RISK-03-01:** The `analytics/` copy and `sector_prioritization` read
@@ -734,11 +734,11 @@ from `artifact_catalog()` for `mcb-demo`, producing the same values as the
 literals it replaces.
 
 **Tasks**
-- [ ] TASK-04-01: Extend the sourcing block at lines 39-47 to also source
+- [x] TASK-04-01: Extend the sourcing block at lines 39-47 to also source
   `R/engagement_config.R` and `R/artifact_catalog.R` (same two-candidate
   pattern, `R/...` and `../../R/...`). Immediately after, define
   `.mcb_catalog <- function() artifact_catalog(load_engagement_config(if (file.exists("engagements/mcb-demo/engagement_config.json")) "engagements/mcb-demo/engagement_config.json" else "../../engagements/mcb-demo/engagement_config.json"))`.
-- [ ] TASK-04-02: Replace the `TIMESTAMP_BASENAMES` literal (48-52) with
+- [x] TASK-04-02: Replace the `TIMESTAMP_BASENAMES` literal (48-52) with
   `unique(basename(.mcb_catalog()$path[.mcb_catalog()$timestamp_class]))`
   (compute the catalog once into a local variable). Replace
   `GATED_HTML_PATHS` (77-84) with `cat$path[cat$gated_html]` and
@@ -746,7 +746,7 @@ literals it replaces.
   Keep every explanatory comment; add one line saying the lists are derived
   from the catalog and that a new gated report is added by setting the flag
   on its catalog row.
-- [ ] TASK-04-03: In `inv_engagement_data_source()` (lines 360-395), replace
+- [x] TASK-04-03: In `inv_engagement_data_source()` (lines 360-395), replace
   the two hand-built `candidates` blocks with: parse the config as today;
   if it lacks `paths` keys the catalog needs, keep the current fallback
   logic unchanged (fixtures write minimal configs); otherwise
@@ -754,11 +754,11 @@ literals it replaces.
   `cat <- artifact_catalog(cfg_merged)` and `cfg_merged` is the raw config
   merged over `.default_engagement_config()` via the loader's
   `.merge_config_lists()`. Simplest safe form: `tryCatch(artifact_catalog(...), error = function(e) NULL)` and fall back to the literal four basenames when NULL.
-- [ ] TASK-04-04: Run `Rscript -e "source('tools/verify_refactor.R'); print(GATED_HTML_PATHS); print(DISCLAIMER_HTML_PATHS); print(TIMESTAMP_BASENAMES)"`
+- [x] TASK-04-04: Run `Rscript -e "source('tools/verify_refactor.R'); print(GATED_HTML_PATHS); print(DISCLAIMER_HTML_PATHS); print(TIMESTAMP_BASENAMES)"`
   and confirm the three vectors equal the pre-change literals as sets
   (order within `DISCLAIMER_HTML_PATHS` may differ; `classify_path()` and
   INV-010 use `%in%`).
-- [ ] TASK-04-05: Run `tests/testthat/test_verify_invariants.R` and
+- [x] TASK-04-05: Run `tests/testthat/test_verify_invariants.R` and
   `test_report_fingerprint.R` (both `source()` the tool from
   `tests/testthat`), then the full suite and both gate modes.
 
@@ -783,9 +783,9 @@ literals it replaces.
 - PHASE-01.
 
 **Exit Criteria**
-- [ ] `grep -n "PACTA_Vietnam_Bank_Report.html" tools/verify_refactor.R` prints nothing.
-- [ ] `Rscript -e "testthat::test_file('tests/testthat/test_verify_invariants.R')"` reports `FAIL 0`.
-- [ ] `Rscript tools/verify_refactor.R --skip-refresh` prints `BYTE-IDENTITY PASS`; `--invariants` prints `INVARIANTS PASS`.
+- [x] `grep -n "PACTA_Vietnam_Bank_Report.html" tools/verify_refactor.R` prints nothing.
+- [x] `Rscript -e "testthat::test_file('tests/testthat/test_verify_invariants.R')"` reports `FAIL 0`.
+- [x] `Rscript tools/verify_refactor.R --skip-refresh` prints `BYTE-IDENTITY PASS`; `--invariants` prints `INVARIANTS PASS`.
 
 **Phase Risks**
 - **RISK-04-01:** Sourcing `R/engagement_config.R` inside the tool attaches
@@ -804,16 +804,16 @@ error; `dashboard/data/README.md` and `NEWS.md` describe the catalog; the
 transition test from PHASE-01 is deleted.
 
 **Tasks**
-- [ ] TASK-05-01: In `dashboard/lib/loaders.py`, add
+- [x] TASK-05-01: In `dashboard/lib/loaders.py`, add
   `artifact_catalog_path()` returning `snapshot_root() / "artifact_catalog.json"`,
   and `load_artifact_catalog()` (cached with `st.cache_data`, keyed on the
   path string like `load_csv`) returning the parsed dict. When the file is
   missing raise `FileNotFoundError(f"{path} not found: regenerate the snapshot with Rscript scripts/refresh_dashboard_data.R --config <engagement config>")`.
-- [ ] TASK-05-02: Add `artifact_snapshot_path(key: str, sector: str | None = None) -> Path`
+- [x] TASK-05-02: Add `artifact_snapshot_path(key: str, sector: str | None = None) -> Path`
   that looks up the row by `key` (and `sector` when given) and returns
   `snapshot_root() / row["snapshot_path"]`; raise `KeyError` naming the key
   and sector when absent.
-- [ ] TASK-05-03: Rewrite `load_pacta_alignment_tables()` to build its dict
+- [x] TASK-05-03: Rewrite `load_pacta_alignment_tables()` to build its dict
   from the six PACTA keys via `artifact_snapshot_path()`;
   `load_trisk_sector_tables(sector)` from the fourteen sector keys with the
   two aliases of DEC-002 (`"combined"` ← `top_borrowers`,
@@ -825,7 +825,7 @@ transition test from PHASE-01 is deleted.
   them (`grep -rn "pacta_path\|trisk_sector_path\|ANALYTICS_TABLES" dashboard`);
   otherwise leave them and stop using them here. Keep
   `load_trisk_tables()`'s `manifest`/`default_sector` shape.
-- [ ] TASK-05-04: In `dashboard/tests/test_loaders.py`, add: (a)
+- [x] TASK-05-04: In `dashboard/tests/test_loaders.py`, add: (a)
   `test_artifact_catalog_lists_every_frozen_file` — for the committed
   Snapshot, every `artifacts[].snapshot_path` exists on disk (skip
   `png_group` rows as directories); (b) `test_loaders_use_catalog_paths` —
@@ -837,26 +837,26 @@ transition test from PHASE-01 is deleted.
   resolves to the tmp file; (c) `test_missing_catalog_raises` — an empty
   `tmp_path` makes `load_artifact_catalog()` raise `FileNotFoundError`
   mentioning `refresh_dashboard_data.R`. Keep every existing test.
-- [ ] TASK-05-05: Run `python -m pytest dashboard/tests` (expect all pass,
+- [x] TASK-05-05: Run `python -m pytest dashboard/tests` (expect all pass,
   including `test_smoke.py`'s `AppTest` page renders).
-- [ ] TASK-05-06: In `dashboard/data/README.md`, add a section
+- [x] TASK-05-06: In `dashboard/data/README.md`, add a section
   `## artifact_catalog.json` (after the Provenance blockquote) stating: it is
   written by `scripts/refresh_dashboard_data.R` from `R/artifact_catalog.R`;
   the app resolves every table path from it; it carries no timestamp and
   is compared byte-for-byte by the gate; the JSON shape (copy S3's example).
-- [ ] TASK-05-07: In `NEWS.md` under `# pactatrisk 0.7.0 (unreleased)`, add
+- [x] TASK-05-07: In `NEWS.md` under `# pactatrisk 0.7.0 (unreleased)`, add
   one bullet `**Artifact catalog:** ...` describing: one owner for Artifact
   locations (`R/artifact_catalog.R`), the nine hand-typed sites it replaced,
   the two fictional registry paths it corrected (`synthesis_output/trisk/<sector>`
   → `<sector>_demo`), the new `artifact_catalog.json` in the Snapshot read by
   the dashboard, and that every CSV and gated report stayed byte-identical.
   Do not quote a test count.
-- [ ] TASK-05-08: Delete the transition test from
+- [x] TASK-05-08: Delete the transition test from
   `tests/testthat/test_artifact_catalog.R` (the block marked
   `# TRANSITION TEST`).
-- [ ] TASK-05-09: Set `status:` in this plan file's front matter to
+- [x] TASK-05-09: Set `status:` in this plan file's front matter to
   `"complete"` and tick every box once TASK-05-10 passes.
-- [ ] TASK-05-10: Final verification: full R suite, full Python suite,
+- [x] TASK-05-10: Final verification: full R suite, full Python suite,
   `Rscript tools/verify_refactor.R` (full refresh), `--invariants`, and the
   SDB end-to-end command pair from Environment & Conventions; confirm
   `git status --porcelain synthesis_output output dashboard/data reports`
@@ -890,11 +890,11 @@ transition test from PHASE-01 is deleted.
 - PHASE-03 (the committed `dashboard/data/artifact_catalog.json`).
 
 **Exit Criteria**
-- [ ] `grep -c "02_vn_matched_prioritized.csv" dashboard/lib/loaders.py` prints `0`.
-- [ ] `python -m pytest dashboard/tests` exits 0.
-- [ ] `Rscript -e "testthat::test_dir('tests/testthat')"` reports `FAIL 0` with the transition test gone.
-- [ ] `Rscript tools/verify_refactor.R` prints `BYTE-IDENTITY PASS`; `--invariants` prints `INVARIANTS PASS`.
-- [ ] SDB end-to-end run exits 0 and leaves `git status --porcelain synthesis_output output dashboard/data reports` empty.
+- [x] `grep -c "02_vn_matched_prioritized.csv" dashboard/lib/loaders.py` prints `0`.
+- [x] `python -m pytest dashboard/tests` exits 0.
+- [x] `Rscript -e "testthat::test_dir('tests/testthat')"` reports `FAIL 0` with the transition test gone.
+- [x] `Rscript tools/verify_refactor.R` prints `BYTE-IDENTITY PASS`; `--invariants` prints `INVARIANTS PASS`.
+- [x] SDB end-to-end run exits 0 and leaves `git status --porcelain synthesis_output output dashboard/data reports` empty.
 
 **Phase Risks**
 - **RISK-05-01:** Streamlit Community Cloud serves the committed
@@ -1017,3 +1017,30 @@ begins; PHASE-02, PHASE-03 and PHASE-04 each depend only on PHASE-01 and can
 be reviewed as separate commits, but land PHASE-03 and PHASE-05 in the same
 push so the deployed dashboard never sees a Snapshot without
 `artifact_catalog.json`.
+
+## Execution Notes
+
+All five phases landed in one implementation commit, with the plan file and
+verification report in a second. Nothing was deferred.
+
+**Verified results:** full R suite `FAIL 0 | PASS 946 | SKIP 1` (the gated SDB
+test, run separately: `FAIL 0 | PASS 15`); Python suite `79 passed`;
+`Rscript tools/verify_refactor.R` on a clean tree `BYTE-IDENTITY PASS` (10
+PNG-noise, 5 timestamp-class, 0 drift — including the newly committed
+`dashboard/data/artifact_catalog.json`, proven deterministic across two full
+refreshes); `--invariants` `INVARIANTS PASS`; dry-run output for both
+engagements character-identical to a `bd09f48` worktree; SDB end-to-end exit 0
+with `git status --porcelain synthesis_output output dashboard/data reports`
+empty.
+
+**Deviations (deliberate, all documented in the report):**
+`test_engagement_plan.R`'s `.test_cfg()` gained the full `paths` key set (the
+catalog refuses an unresolvable config); the copier's intra-sector file order
+follows catalog order (bytes unchanged); `load_trisk_tables()` resolves
+`manifest.csv` from the catalog and the now-dead `trisk_manifest()`/
+`trisk_path()`/`trisk_sector_path()`/`reports_path()` helpers were deleted;
+`tools/verify_refactor.R`'s `.mcb_catalog()` merges the engagement config
+without the loader's file-existence validation so the tool stays sourceable from
+`tests/testthat`; INV-003 keeps its literal fallback for minimal fixture
+configs. The previous-run ordering defect in `sector_prioritization` and the
+analytics copy was preserved, as the plan requires.

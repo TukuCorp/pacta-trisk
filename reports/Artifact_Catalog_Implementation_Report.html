@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Artifact Catalog Implementation Report — 2026-09-13</title>
+<style>
+body{font-family:Segoe UI,Arial,sans-serif;max-width:1000px;margin:2rem auto;padding:0 1.5rem;color:#1a202c}
+h1{border-bottom:3px solid #14645c;padding-bottom:.4rem}h2{color:#14645c;margin-top:2rem}
+h3{color:#2b6cb0;margin:.2rem 0 .5rem}
+table{border-collapse:collapse;width:100%;margin:.8rem 0}th,td{border:1px solid #cbd5e0;padding:.45rem .6rem;text-align:left;font-size:.9rem}
+th{background:#edf2f7}.pass{color:#0a7a3d;font-weight:bold}.fail{color:#c53030;font-weight:bold}
+code{background:#f1f5f9;padding:.1rem .35rem;border-radius:4px;font-size:.85em}
+.badge{display:inline-block;background:#14645c;color:#fff;border-radius:999px;padding:.15rem .7rem;font-size:.8rem}
+.phase{border:1px solid #cbd5e0;border-radius:10px;padding:1rem 1.2rem;margin:1rem 0}
+.files{color:#4a5568;font-size:.85rem}
+.note{background:#fffff0;border-left:4px solid #d69e2e;padding:.7rem 1rem;margin:1rem 0}
+footer{margin-top:2rem;padding-top:1rem;border-top:1px solid #e2e8f0;color:#718096;font-size:.85rem}
+</style></head><body>
+<h1>Artifact Catalog Implementation Report <span class="badge">2026-09-13</span></h1>
+<p>Plan: <code>plans/2026-09-13-artifact-catalog-plan.md</code> — all 5 phases implemented in full.
+Design record: <code>research/2026-09-13_artifact-catalog-design-grill.md</code>;
+decision: <code>docs/adr/0001-artifact-catalog-owns-locations.md</code>; glossary: <code>CONTEXT.md</code>.</p>
+
+<h2>Objective</h2>
+<p>Nine places spelled Artifact paths by hand and two of them were already wrong: the step registry
+declared <code>synthesis_output/trisk/&lt;sector&gt;</code> where TRISK writes <code>&lt;sector&gt;_demo</code>, and a single
+<code>trisk_input_root</code> where the real inputs sit under <code>&lt;root&gt;/&lt;sector&gt;_demo/</code>. Because
+<code>validate_step_dependencies()</code> compares strings, step ordering was being validated against paths nothing writes.</p>
+<p>This work gives every Artifact one owner — <code>R/artifact_catalog.R</code> — that knows each Artifact's key,
+producing Step, repo-relative output path and Snapshot path; makes every R consumer derive its list from it; exports
+the resolved catalog into the Snapshot as <code>artifact_catalog.json</code>; and has the Streamlit app resolve every
+table path from that export. It is a refactor under the repo's existing acceptance gate: no CSV and no gated report
+changed.</p>
+
+<h2>Phases</h2>
+<div class="phase"><h3>PHASE-01 — Catalog module</h3>
+<p>New <code>R/artifact_catalog.R</code>: <code>artifact_catalog(cfg)</code> (one row per resolved Artifact — 83 rows for
+MCB: 29 engagement-scoped + 3 sectors × 18), <code>artifact_path(cfg, key, sector, where)</code> and
+<code>write_artifact_catalog_json(cfg, path)</code>. Rows carry only the five flags that have a consumer today
+(<code>history_headline</code>, <code>timestamp_class</code>, <code>gated_html</code>, <code>disclaimer_required</code>,
+<code>data_source_check</code>). 13 tests, including a transition test pinning the union of every hand-typed path literal.</p>
+<p class="files">R/artifact_catalog.R, tests/testthat/test_artifact_catalog.R, NAMESPACE (3 exports), man/ (+3 .Rd)</p></div>
+
+<div class="phase"><h3>PHASE-02 — Registry, planner and PACTA driver read the catalog</h3>
+<p>The six hand-written <code>produces_fn</code>/<code>requires_fn</code> closures are deleted; entries declare
+<code>requires</code> by artifact key and <code>.attach_dependency_fns()</code> derives both closures from the catalog.
+The manifest path, <code>row_count_files</code> validation (refuses an uncatalogued Snapshot path) and the PACTA facts
+sidecar also come from the catalog. Dependency edges are unchanged; the paths they name are now real.</p>
+<p class="files">R/step_registry.R, R/engagement_plan.R, scripts/run_engagement.R, scripts/pacta_vietnam_scenario.R, 3 test files</p></div>
+
+<div class="phase"><h3>PHASE-03 — Snapshot copier, run history and refresh audit</h3>
+<p><code>scripts/refresh_dashboard_data.R</code> copies exactly the rows the catalog says have a Snapshot location
+(files → PNG groups → reports → TRISK files/figures/grid → <code>manifest.csv</code> → analytics) and writes
+<code>&lt;snapshot_dir&gt;/artifact_catalog.json</code>. Run history takes its headline set from the
+<code>history_headline</code> flag; the refresh audit resolves its reads and writes by key. The snapshot-contract test
+became a catalog-versus-Snapshot check: every catalogued Snapshot path exists, and no uncatalogued CSV/parquet/json
+hides under <code>pacta/</code>, <code>trisk/</code> or <code>analytics/</code>.</p>
+<p class="files">scripts/refresh_dashboard_data.R, scripts/record_run_history.R, scripts/generate_refresh_audit.R,
+tests/testthat/test_snapshot_contract.R, dashboard/data/artifact_catalog.json (67 artifacts, committed)</p></div>
+
+<div class="phase"><h3>PHASE-04 — The gate derives its lists</h3>
+<p><code>TIMESTAMP_BASENAMES</code>, <code>GATED_HTML_PATHS</code>, <code>DISCLAIMER_HTML_PATHS</code> and INV-003's
+candidate list are computed from the mcb-demo catalog; the values are set-equal to the literals they replace
+(including order for the first two). A new gated report is now added by setting a flag on its catalog row. The tool
+sources the config + catalog with the same two-candidate pattern it uses from <code>tests/testthat</code>, and merges
+the config without the loader's file-existence validation so it can be sourced from either working directory.</p>
+<p class="files">tools/verify_refactor.R</p></div>
+
+<div class="phase"><h3>PHASE-05 — The dashboard reads the export; docs; cleanup</h3>
+<p><code>dashboard/lib/loaders.py</code> gained <code>artifact_catalog_path()</code>,
+<code>load_artifact_catalog()</code> and <code>artifact_snapshot_path(key, sector)</code>; every table loader resolves
+from the export (page-facing keys unchanged, with the two documented aliases <code>combined</code> →
+<code>top_borrowers</code> and <code>company_trajectories_latest</code> → <code>company_trajectories</code>). Four dead
+hand-typed path helpers were deleted. README and NEWS describe the catalog; the PHASE-01 transition test is removed.</p>
+<p class="files">dashboard/lib/loaders.py, dashboard/tests/test_loaders.py, dashboard/tests/test_analytics_page.py,
+dashboard/data/README.md, NEWS.md</p></div>
+
+<h2>Verification (observed)</h2>
+<table>
+<tr><th>Check</th><th>Command</th><th>Result</th></tr>
+<tr><td>Full R suite</td><td><code>Rscript -e "testthat::test_dir('tests/testthat')"</code></td><td class="pass">FAIL 0 · PASS 946 · SKIP 1 (SDB gated)</td></tr>
+<tr><td>Python suite</td><td><code>python -m pytest dashboard/tests</code></td><td class="pass">79 passed</td></tr>
+<tr><td>Byte-identity gate (clean tree)</td><td><code>Rscript tools/verify_refactor.R</code></td><td class="pass">BYTE-IDENTITY PASS — 10 PNG-noise, 5 timestamp-class, 0 drift</td></tr>
+<tr><td>Cross-artifact invariants</td><td><code>Rscript tools/verify_refactor.R --invariants</code></td><td class="pass">INVARIANTS PASS (INV-001..INV-013)</td></tr>
+<tr><td>Dry-run parity vs <code>bd09f48</code> worktree</td><td><code>run_engagement.R … --dry-run</code> (mcb-demo, sdb-rehearsal)</td><td class="pass">character-identical (16 and 15 step lines)</td></tr>
+<tr><td>SDB end-to-end</td><td><code>run_engagement.R --config engagements/sdb-rehearsal/…</code></td><td class="pass">exit 0; export at <code>engagements/sdb-rehearsal/snapshot/artifact_catalog.json</code> (66 rows — no private manifest)</td></tr>
+<tr><td>Gated SDB golden test</td><td><code>RUN_SDB_ENGAGEMENT=1 test_file('…/test_sdb_engagement.R')</code></td><td class="pass">FAIL 0 · PASS 15</td></tr>
+<tr><td>No cross-contamination</td><td><code>git status --porcelain synthesis_output output dashboard/data reports</code></td><td class="pass">empty</td></tr>
+<tr><td>Package load / roxygen</td><td><code>devtools::load_all('.')</code>; <code>roxygen2::roxygenise()</code></td><td class="pass">loads; NAMESPACE already fresh</td></tr>
+<tr><td>Catalog determinism</td><td>two full refreshes, gate compares the committed JSON</td><td class="pass">byte-identical</td></tr>
+</table>
+
+<h2>Deviations from the plan (all deliberate)</h2>
+<ul>
+<li><code>test_engagement_plan.R</code>'s synthetic <code>.test_cfg()</code> now carries the full <code>paths</code> key
+set: the catalog refuses a config missing a location key, and a synthetic config that cannot resolve is not a useful
+test double. Behaviour assertions are unchanged.</li>
+<li>The copier's intra-sector file order follows catalog order (input-side rows first); content and the
+<code>manifest.csv</code> bytes are unchanged.</li>
+<li><code>load_trisk_tables()</code> resolves <code>manifest.csv</code> through the catalog too, and the now-unused
+<code>trisk_manifest()</code>/<code>trisk_path()</code>/<code>trisk_sector_path()</code>/<code>reports_path()</code>
+helpers were deleted (<code>pacta_path()</code> and <code>analytics_path()</code> are still imported by tests).</li>
+<li>Filtered-run <code>plan_engagement_run()</code> calls in <code>test_engagement_plan.R</code> now warn about the
+previous-run <code>sector_priority_ranking.csv</code> read; that is the pre-existing dependency warning surfacing with
+a real path instead of the old degenerate one, and no test asserted silence there.</li>
+</ul>
+
+<div class="note"><strong>Known ordering defect this plan intentionally leaves in place:</strong>
+<code>sector_prioritization</code> and the analytics copy consume the <em>previous</em> run's Snapshot. Reordering
+changes the pinned step order and the manifest, so it belongs in its own plan — the catalog's
+<code>snapshot_path</code> column turns that follow-up into a one-line <code>requires</code> change.</div>
+
+<footer>Synthetic data — illustrative only. Requires human &amp; legal review before any external use. /
+D&#7919; li&#7879;u m&#244; ph&#7887;ng &mdash; ch&#7881; mang t&iacute;nh minh h&#7885;a.</footer>
+</body></html>
