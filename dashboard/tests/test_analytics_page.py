@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -18,9 +19,27 @@ def analytics_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     d = tmp_path / "analytics"
     d.mkdir()
     monkeypatch.setenv("PACTATRISK_SNAPSHOT_DIR", str(tmp_path))
+    # The app resolves every table path from the Artifact catalog the snapshot
+    # step writes (ADR-0001), so a fixture snapshot needs its own catalog.
+    (tmp_path / "artifact_catalog.json").write_text(
+        json.dumps({
+            "schema_version": 1,
+            "bank_slug": "test-bank",
+            "sectors": [],
+            "artifacts": [
+                {"key": key, "group": "analytics", "scope": "engagement", "sector": None,
+                 "producer": "financed_emissions", "kind": "csv",
+                 "snapshot_path": f"analytics/{key}.csv"}
+                for key in loaders.ANALYTICS_TABLE_KEYS
+            ],
+        }),
+        encoding="utf-8",
+    )
     # load_csv is memoized by streamlit's cache; clear it between cases so a
     # path reused across tests does not serve a stale frame.
     loaders.load_csv.clear()
+    # Same for the artifact catalog, which is memoized on its resolved path.
+    loaders._load_artifact_catalog_cached.clear()
     return d
 
 
@@ -64,6 +83,7 @@ def test_missing_analytics_directory_yields_empty_dict(
     # crash, exactly as report_catalog() does for a missing sidecar.
     monkeypatch.setenv("PACTATRISK_SNAPSHOT_DIR", str(tmp_path / "does_not_exist"))
     loaders.load_csv.clear()
+    loaders._load_artifact_catalog_cached.clear()
 
     assert loaders.load_analytics_tables() == {}
 

@@ -44,13 +44,41 @@ local({
   if (length(hit) > 0) source(hit[[1]])
 })
 
+# PHASE-04 of plans/2026-09-13-artifact-catalog-plan.md: the path lists below
+# are derived from R/artifact_catalog.R, the single owner of Artifact locations
+# (ADR-0001). Add a new gated report by setting `gated_html` on its catalog row,
+# not by editing a list here. Same two-candidate sourcing pattern as above.
+local({
+  for (file in c("R/engagement_config.R", "R/artifact_catalog.R")) {
+    candidates <- c(file, file.path("..", "..", file))
+    hit <- candidates[file.exists(candidates)]
+    if (length(hit) > 0) source(hit[[1]])
+  }
+})
+
+# The mcb-demo catalog. The config is merged over the loader defaults WITHOUT
+# the loader's validation: this tool is also sourced from tests/testthat, where
+# the engagement's input CSVs are not resolvable relative to the working
+# directory, and the catalog needs only paths, slug and sectors.
+.mcb_catalog <- function() {
+  candidates <- c(
+    "engagements/mcb-demo/engagement_config.json",
+    file.path("..", "..", "engagements", "mcb-demo", "engagement_config.json")
+  )
+  hit <- candidates[file.exists(candidates)]
+  if (length(hit) == 0) {
+    stop("verify_refactor: cannot locate engagements/mcb-demo/engagement_config.json", call. = FALSE)
+  }
+  override <- jsonlite::read_json(hit[[1]], simplifyVector = TRUE)
+  artifact_catalog(.merge_config_lists(.default_engagement_config(), override))
+}
+
+.mcb_catalog_df <- .mcb_catalog()
+
 # TIMESTAMP_BASENAMES: files whose only expected diff is generated-timestamp
-# text or a run-scoped git_sha, never numeric content.
-TIMESTAMP_BASENAMES <- c(
-  "pipeline_manifest.json",
-  "refresh_audit_metrics.json",
-  "manifest.csv"
-)
+# text or a run-scoped git_sha, never numeric content. Derived from the
+# catalog's `timestamp_class` flag.
+TIMESTAMP_BASENAMES <- unique(basename(.mcb_catalog_df$path[.mcb_catalog_df$timestamp_class]))
 
 # A facts sidecar (.facts.json) changing is intentionally genuine drift: the
 # numbers moved (Wave 5 PHASE-03). Sidecars carry no timestamp (ASM-005), so
@@ -74,23 +102,12 @@ TIMESTAMP_BASENAMES <- c(
 # index and the disclosure pack are generated deliverables but are gitignored
 # (.gitignore:21 and :23) -- they are covered by DISCLAIMER_HTML_PATHS below
 # instead, which reads from disk and does not need a committed counterpart.
-GATED_HTML_PATHS <- c(
-  "reports/PACTA_Vietnam_Bank_Report.html",
-  "reports/Financed_Emissions.html",
-  "reports/SLL_Readiness_Shortlist.html",
-  "reports/Sector_Target_Registry.html",
-  "reports/BIDV_Framework_Recommendation_Report.html",
-  "reports/pipeline_refresh_audit.html"
-)
+GATED_HTML_PATHS <- .mcb_catalog_df$path[.mcb_catalog_df$gated_html]
 
 # DISCLAIMER_HTML_PATHS (Wave 4 PHASE-01, INV-010): every generated HTML
 # deliverable that must carry the synthetic-data disclaimer, whether or not it
 # is tracked by git. Superset of GATED_HTML_PATHS.
-DISCLAIMER_HTML_PATHS <- c(
-  GATED_HTML_PATHS,
-  "output/disclosure/disclosure_pack.html",
-  "output/engagement_letters/index.html"
-)
+DISCLAIMER_HTML_PATHS <- .mcb_catalog_df$path[.mcb_catalog_df$disclaimer_required]
 
 #' Is a gated HTML file's working-tree content equal to its committed content
 #' once generated timestamps, dates and git SHAs are normalized away?
@@ -367,17 +384,28 @@ inv_engagement_data_source <- function(root) {
     cfg <- tryCatch(jsonlite::fromJSON(config_path, simplifyVector = TRUE), error = function(e) NULL)
     if (is.null(cfg) || is.null(cfg$bank_slug) || is.null(cfg$paths)) next
 
-    candidates <- character(0)
-    if (!is.null(cfg$paths$engagement_output_dir)) {
-      candidates <- c(candidates, file.path(
-        root, cfg$paths$engagement_output_dir,
-        c("engagement_priority.csv", "sll_readiness.csv", "target_registry.csv")
-      ))
-    }
-    if (!is.null(cfg$paths$financed_emissions_output_dir)) {
-      candidates <- c(candidates, file.path(
-        root, cfg$paths$financed_emissions_output_dir, "financed_emissions.csv"
-      ))
+    # The per-engagement CSVs that carry a `data_source` column are exactly the
+    # catalog rows flagged `data_source_check` (PHASE-04). A config too minimal
+    # for the catalog to resolve (test fixtures) keeps the historical literal
+    # fallback below.
+    candidates <- tryCatch({
+      merged <- .merge_config_lists(.default_engagement_config(), cfg)
+      catalog <- artifact_catalog(merged)
+      file.path(root, catalog$path[catalog$data_source_check])
+    }, error = function(e) NULL)
+    if (is.null(candidates)) {
+      candidates <- character(0)
+      if (!is.null(cfg$paths$engagement_output_dir)) {
+        candidates <- c(candidates, file.path(
+          root, cfg$paths$engagement_output_dir,
+          c("engagement_priority.csv", "sll_readiness.csv", "target_registry.csv")
+        ))
+      }
+      if (!is.null(cfg$paths$financed_emissions_output_dir)) {
+        candidates <- c(candidates, file.path(
+          root, cfg$paths$financed_emissions_output_dir, "financed_emissions.csv"
+        ))
+      }
     }
 
     for (csv_path in candidates) {

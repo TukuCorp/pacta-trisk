@@ -13,20 +13,18 @@ suppressPackageStartupMessages({
 })
 
 source("R/engagement_config.R")
+source("R/artifact_catalog.R")
 source("R/run_history.R")
 
 cfg <- load_engagement_config(get_config_arg())
 
 # The headline artifacts worth keeping across time -- deliberately not the
-# full output tree (history/ would grow without bound otherwise). Extend
-# this list, not the mechanism, when a new headline artifact exists (e.g.
-# financed_emissions.csv in a later phase).
-artifacts <- c(
-  file.path(cfg$paths$engagement_output_dir, "engagement_priority.csv"),
-  file.path(cfg$paths$prioritization_output_dir, "sector_priority_ranking.csv"),
-  file.path(cfg$paths$pacta_output_dir, "06_vn_ms_alignment_2030.csv"),
-  file.path(cfg$paths$pacta_output_dir, "06_vn_sda_alignment_2030.csv")
-)
+# full output tree (history/ would grow without bound otherwise). Which
+# artifacts count as headlines is the catalog's `history_headline` flag
+# (ADR-0001), so promoting a new artifact into history is a catalog-row
+# change, not a change here.
+headlines <- artifact_catalog(cfg)
+artifacts <- headlines$path[headlines$history_headline]
 
 history_root <- cfg$paths$history_dir %||% "history"
 

@@ -35,6 +35,7 @@ library(readr)
 library(stringi)
 
 source("R/engagement_config.R")
+source("R/artifact_catalog.R")
 source("R/sector_registry.R")
 source("R/report_toolkit.R")
 source("R/matching_helpers.R")
@@ -88,11 +89,10 @@ report_path <- pacta_build_report(bank_name, bank_short, inputs$loanbook, matche
 # Wave 5 PHASE-03: facts sidecar -- headline figures recomputed from source
 # CSVs and asserted by INV-013, so a wrong number fails a gate instead of
 # being frozen by one.
-pacta_report_rel <- file.path(cfg$paths$reports_dir, "PACTA_Vietnam_Bank_Report.html")
+pacta_report_rel <- artifact_path(cfg, "pacta_bank_report")
 pacta_loanbook_total <- sum(inputs$loanbook$loan_size_outstanding)
-pacta_matched_check <- utils::read.csv(
-  file.path(cfg$paths$pacta_output_dir, "02_vn_matched_prioritized.csv"),
-  stringsAsFactors = FALSE)
+pacta_matched_rel <- artifact_path(cfg, "matches")
+pacta_matched_check <- utils::read.csv(pacta_matched_rel, stringsAsFactors = FALSE)
 pacta_facts <- list(
   report_fact("portfolio_total_vnd", pacta_loanbook_total, cfg$inputs$loanbook_csv,
               "sum", column = "loan_size_outstanding", unit = "VND",
@@ -100,7 +100,7 @@ pacta_facts <- list(
   report_fact("n_loans", nrow(inputs$loanbook), cfg$inputs$loanbook_csv,
               "nrow", unit = "loans", rendered = as.character(nrow(inputs$loanbook))),
   report_fact("n_matched", nrow(pacta_matched_check),
-              file.path(cfg$paths$pacta_output_dir, "02_vn_matched_prioritized.csv"),
+              pacta_matched_rel,
               "nrow", unit = "loans", rendered = as.character(nrow(pacta_matched_check)))
 )
 write_report_facts(pacta_facts, pacta_report_rel, "scripts/pacta_vietnam_scenario.R")

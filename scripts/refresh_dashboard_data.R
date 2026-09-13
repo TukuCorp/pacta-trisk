@@ -2,6 +2,15 @@
 # refresh_dashboard_data.R
 # Republish the dashboard data snapshot from current pipeline outputs.
 # Usage: Rscript scripts/refresh_dashboard_data.R [--config <path>]
+#
+# PHASE-03 of plans/2026-09-13-artifact-catalog-plan.md: every path this script
+# copies, and every path it skips, comes from R/artifact_catalog.R -- the single
+# owner of Artifact locations (ADR-0001). The script keeps its own copy
+# mechanics (copy_file/copy_png_group), its published-report cross-check, and
+# its exit status; it no longer spells a single CSV basename.
+#
+# It also writes <snapshot_dir>/artifact_catalog.json: the machine-readable
+# export the Streamlit app resolves every table path from.
 
 suppressPackageStartupMessages({
   library(dplyr)
@@ -11,9 +20,11 @@ suppressPackageStartupMessages({
 })
 
 source("R/engagement_config.R")
+source("R/artifact_catalog.R")
 source("R/sector_registry.R")
 
 cfg <- load_engagement_config(get_config_arg())
+catalog <- artifact_catalog(cfg)
 
 clear_dir <- function(path) {
   if (dir.exists(path)) {
@@ -62,14 +73,15 @@ copy_png_group <- function(src_dir, dest_dir, required = TRUE) {
   }
 }
 
-pacta_files <- file.path(cfg$paths$pacta_output_dir, c(
-  "02_vn_matched_prioritized.csv",
-  "04_vn_ms_company.csv",
-  "04_vn_ms_portfolio.csv",
-  "05_vn_sda_portfolio.csv",
-  "06_vn_ms_alignment_2030.csv",
-  "06_vn_sda_alignment_2030.csv"
-))
+# Copy one catalog row: a single file into the directory its Snapshot path
+# names, or a PNG group from directory to directory.
+copy_row <- function(row, required = TRUE) {
+  if (identical(row$kind[[1]], "png_group")) {
+    copy_png_group(row$path[[1]], row$snapshot_path[[1]], required = required)
+  } else {
+    copy_file(row$path[[1]], dirname(row$snapshot_path[[1]]), required = required)
+  }
+}
 
 # Wave 3 PHASE-02 (DEC-006): the published report set is config-declared
 # (cfg$published_reports) and cross-checked against reports/report_catalog.json
@@ -77,6 +89,8 @@ pacta_files <- file.path(cfg$paths$pacta_output_dir, c(
 # from the catalog, or present with category "internal_build", is a hard
 # error -- this is what keeps an internal engineering phase report or a
 # European-demo-data report from silently reaching the public snapshot again.
+# (report_catalog.json is Deliverable *metadata*, not an Artifact location;
+# the artifact catalog's `reports` rows are about where the generator writes.)
 report_catalog_path <- "reports/report_catalog.json"
 report_catalog <- if (file.exists(report_catalog_path)) {
   jsonlite::fromJSON(report_catalog_path, simplifyVector = TRUE)
@@ -102,34 +116,22 @@ for (fname in cfg$published_reports) {
 
 report_files <- file.path("reports", cfg$published_reports)
 
-trisk_sector_files <- c(
-  "assets.csv",
-  "company_summary.csv",
-  "company_trajectories_latest.csv",
-  "financial_features.csv",
-  "ngfs_carbon_price.csv",
-  "npv_results_latest.csv",
-  "params_latest.csv",
-  "pd_results_latest.csv",
-  "pd_summary.csv",
-  "run_catalog.csv",
-  "scenarios.csv",
-  "sensitivity_results.csv",
-  "sensitivity_summary.csv",
-  "top_borrowers_alignment_trisk.csv"
-)
-
 snapshot_dir <- cfg$paths$snapshot_dir
+
+# Only rows with a Snapshot location are the copier's business. The
+# `trisk_manifest` and `pipeline_manifest` rows are produced *in* the Snapshot
+# by this script and by the orchestrator, so they are never copied.
+snapshot_rows <- catalog[!is.na(catalog$snapshot_path), , drop = FALSE]
 
 trisk_manifest <- sector_registry() %>%
   filter(sector %in% cfg$trisk_sectors) %>%
   select(sector, label, folder, price_unit, pathway_unit, alignment_mode, grid_available, disclaimer)
 
-for (f in pacta_files) {
-  copy_file(f, file.path(snapshot_dir, "pacta"))
+# --- PACTA tables, then the PACTA figure group --------------------------------
+pacta_rows <- snapshot_rows[snapshot_rows$group == "pacta", , drop = FALSE]
+for (i in seq_len(nrow(pacta_rows))) {
+  copy_row(pacta_rows[i, , drop = FALSE])
 }
-
-copy_png_group(cfg$paths$pacta_output_dir, file.path(snapshot_dir, "pacta"))
 
 # Reports are optional (warn only): a missing rendered report should not block
 # the data snapshot from publishing.
@@ -140,6 +142,7 @@ if (file.exists(report_catalog_path)) {
   copy_file(report_catalog_path, file.path(snapshot_dir, "reports"), required = FALSE)
 }
 
+# --- TRISK per sector: files, then figures, then the scenario grid -------------
 trisk_dest <- file.path(snapshot_dir, "trisk")
 if (!dir.exists(trisk_dest)) dir.create(trisk_dest, recursive = TRUE)
 clear_dir(trisk_dest)
@@ -147,39 +150,35 @@ clear_dir(trisk_dest)
 grid_root <- file.path(trisk_dest, "grid")
 dir.create(grid_root, recursive = TRUE, showWarnings = FALSE)
 
+sector_rows <- snapshot_rows[snapshot_rows$scope == "sector", , drop = FALSE]
+
 for (i in seq_len(nrow(trisk_manifest))) {
   sector <- trisk_manifest$sector[[i]]
-  src_root <- file.path(cfg$paths$trisk_output_root, paste0(sector, "_demo"))
-  input_root <- file.path(cfg$paths$trisk_input_root, paste0(sector, "_demo"))
   dest_root <- file.path(trisk_dest, sector)
   if (!dir.exists(dest_root)) dir.create(dest_root, recursive = TRUE, showWarnings = FALSE)
 
-  for (name in trisk_sector_files) {
-    src <- if (name %in% c("assets.csv", "financial_features.csv", "ngfs_carbon_price.csv", "scenarios.csv")) {
-      file.path(input_root, name)
-    } else {
-      file.path(src_root, name)
-    }
-    copy_file(src, dest_root)
+  rows <- sector_rows[sector_rows$sector == sector & sector_rows$group != "grid", , drop = FALSE]
+  for (j in seq_len(nrow(rows))) {
+    if (identical(rows$kind[[j]], "png_group")) next
+    copy_row(rows[j, , drop = FALSE])
   }
-
-  copy_png_group(file.path(src_root, "figures"), dest_root)
+  for (j in seq_len(nrow(rows))) {
+    if (!identical(rows$kind[[j]], "png_group")) next
+    copy_row(rows[j, , drop = FALSE])
+  }
 
   # The app reads only the consolidated grid artifacts; raw per-run CSVs under
   # runs/ stay in synthesis_output and are never published to the snapshot.
-  grid_src_root <- file.path(cfg$paths$trisk_output_root, "grid", sector)
-  grid_dest_root <- file.path(grid_root, sector)
-  grid_file_names <- c("scenarios.csv", "borrower_results.parquet", "grid_meta.json")
-  if (!dir.exists(grid_dest_root)) dir.create(grid_dest_root, recursive = TRUE, showWarnings = FALSE)
-  for (name in grid_file_names) {
-    copy_file(file.path(grid_src_root, name), grid_dest_root, required = cfg$run_grid)
+  grid_rows <- sector_rows[sector_rows$sector == sector & sector_rows$group == "grid", , drop = FALSE]
+  for (j in seq_len(nrow(grid_rows))) {
+    copy_row(grid_rows[j, , drop = FALSE], required = cfg$run_grid)
   }
-  grid_files <- file.path(grid_dest_root, grid_file_names)
-  trisk_manifest$grid_available[[i]] <- all(file.exists(grid_files))
+  trisk_manifest$grid_available[[i]] <- all(file.exists(grid_rows$snapshot_path))
 }
 
-write_csv(trisk_manifest, file.path(trisk_dest, "manifest.csv"))
-message(sprintf("  [OK] %s written", file.path(trisk_dest, "manifest.csv")))
+manifest_path <- artifact_path(cfg, "trisk_manifest")
+write_csv(trisk_manifest, manifest_path)
+message(sprintf("  [OK] %s written", manifest_path))
 
 # --- Wave 3 analytics as DATA, not just as rendered HTML (Wave 4 PHASE-06) ---
 # The PCAF inventory, the sector target registry and the SLL shortlist reached
@@ -190,22 +189,20 @@ message(sprintf("  [OK] %s written", file.path(trisk_dest, "manifest.csv")))
 #
 # Each file is copied only when it exists: an engagement that did not run
 # financed emissions, targets or the SLL screen still refreshes cleanly.
-analytics_dest <- file.path(cfg$paths$snapshot_dir, "analytics")
-if (!dir.exists(analytics_dest)) dir.create(analytics_dest, recursive = TRUE, showWarnings = FALSE)
-
-analytics_sources <- c(
-  file.path(cfg$paths$financed_emissions_output_dir, "financed_emissions.csv"),
-  file.path(cfg$paths$financed_emissions_output_dir, "data_quality_summary.csv"),
-  file.path(cfg$paths$engagement_output_dir, "target_registry.csv"),
-  file.path(cfg$paths$engagement_output_dir, "sll_readiness.csv")
-)
-for (src in analytics_sources) {
+analytics_rows <- snapshot_rows[snapshot_rows$group == "analytics", , drop = FALSE]
+for (i in seq_len(nrow(analytics_rows))) {
+  src <- analytics_rows$path[[i]]
   if (file.exists(src)) {
-    copy_file(src, analytics_dest)
+    copy_file(src, dirname(analytics_rows$snapshot_path[[i]]))
   } else {
     message(sprintf("  [SKIP] %s not present for this engagement", src))
   }
 }
+
+# --- The catalog the dashboard reads (PHASE-03) -------------------------------
+catalog_path <- file.path(snapshot_dir, "artifact_catalog.json")
+write_artifact_catalog_json(cfg, catalog_path)
+message(sprintf("  [OK] %s written", catalog_path))
 
 if (length(misses_required) > 0) {
   message("\nMISSING REQUIRED artifacts — snapshot refresh FAILED:")

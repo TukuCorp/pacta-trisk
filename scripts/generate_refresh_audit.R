@@ -25,12 +25,16 @@ suppressPackageStartupMessages({
 })
 
 source("R/engagement_config.R")
+source("R/artifact_catalog.R")
 
 cfg <- load_engagement_config(get_config_arg())
 
-manifest_path <- file.path(cfg$paths$snapshot_dir, "pipeline_manifest.json")
-out_html <- file.path(cfg$paths$reports_dir, "pipeline_refresh_audit.html")
-metrics_path <- file.path(cfg$paths$reports_dir, "refresh_audit_metrics.json")
+# Every Artifact this audit reads or writes is located by the catalog
+# (ADR-0001); the metrics sidecar's vintage field below is what makes the
+# attestation checkable.
+manifest_path <- artifact_path(cfg, "pipeline_manifest")
+out_html <- artifact_path(cfg, "refresh_audit_report")
+metrics_path <- artifact_path(cfg, "refresh_audit_metrics")
 
 if (!file.exists(manifest_path)) {
   stop(sprintf("%s not found. Run the pipeline first.", manifest_path))
@@ -59,7 +63,7 @@ for (f in input_files) {
   }
 }
 
-pacta_matched_path <- file.path(cfg$paths$snapshot_dir, "pacta", "02_vn_matched_prioritized.csv")
+pacta_matched_path <- artifact_path(cfg, "matches", where = "snapshot")
 pacta_coverage <- list()
 if (file.exists(pacta_matched_path)) {
   matched <- read_csv(pacta_matched_path, show_col_types = FALSE)
@@ -68,7 +72,7 @@ if (file.exists(pacta_matched_path)) {
   }
 }
 
-trisk_top_path <- file.path(cfg$paths$snapshot_dir, "trisk", "power", "top_borrowers_alignment_trisk.csv")
+trisk_top_path <- artifact_path(cfg, "top_borrowers", sector = "power", where = "snapshot")
 trisk_top5 <- data.frame()
 if (file.exists(trisk_top_path)) {
   tb <- read_csv(trisk_top_path, show_col_types = FALSE)
@@ -77,7 +81,7 @@ if (file.exists(trisk_top_path)) {
   }
 }
 
-engagement_path <- file.path(cfg$paths$engagement_output_dir, "engagement_priority.csv")
+engagement_path <- artifact_path(cfg, "engagement_priority")
 engagement_top5 <- data.frame()
 if (file.exists(engagement_path)) {
   ep <- read_csv(engagement_path, show_col_types = FALSE)

@@ -2,6 +2,28 @@
 
 > **Provenance:** PACTA files are snapshots from `scripts/pacta_vietnam_scenario.R`. TRISK files are snapshots from `scripts/trisk_prepare_inputs.R` and `scripts/trisk_sector_demo.R` (run per sector, e.g. `scripts/trisk_sector_demo.R power`). Regenerate with `scripts/refresh_dashboard_data.R`, or run the whole chain via `scripts/pipeline_refresh.R`.
 
+## `artifact_catalog.json`
+
+Written by `scripts/refresh_dashboard_data.R` from `R/artifact_catalog.R`, the single owner of Artifact locations. The dashboard resolves every table path from it (see `dashboard/lib/loaders.py`), so no page spells a Snapshot filename. It carries no timestamp, its rows follow catalog order, and the byte-identity gate compares it like any other Snapshot artifact.
+
+```json
+{
+  "schema_version": 1,
+  "bank_slug": "mcb-demo",
+  "sectors": ["power", "cement", "steel"],
+  "artifacts": [
+    {"key": "matches", "group": "pacta", "scope": "engagement", "sector": null,
+     "producer": "pacta_vietnam_scenario", "kind": "csv",
+     "snapshot_path": "pacta/02_vn_matched_prioritized.csv"},
+    {"key": "assets", "group": "trisk_input", "scope": "sector", "sector": "power",
+     "producer": "trisk_prepare_inputs", "kind": "csv",
+     "snapshot_path": "trisk/power/assets.csv"}
+  ]
+}
+```
+
+Only rows with a Snapshot location appear; `snapshot_path` is relative to this directory. `sector` is `null` for engagement-scoped Artifacts.
+
 ## `pacta/` — PACTA Alignment Outputs (Vietnam MCB)
 
 | File | Columns | Units | Provenance |

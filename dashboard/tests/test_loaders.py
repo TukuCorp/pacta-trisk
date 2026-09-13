@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 from dashboard.lib.loaders import (
     load_pacta_alignment_tables,
@@ -80,6 +81,72 @@ def test_trisk_grid_scenario_count() -> None:
     # asserts against the documented product (see
     # docs/trisk_scenario_grid_contract.md) rather than a bare magic number.
     assert grid_meta["scenario_count"] == 3 ** 5
+
+
+# --- Artifact catalog (PHASE-05 of the artifact-catalog plan) ----------------
+
+def test_artifact_catalog_lists_every_frozen_file() -> None:
+    """Every catalogued Snapshot location in the committed snapshot exists.
+
+    The catalog is what the app resolves paths from, so a row whose file is
+    missing means a page will import-error or 404; png_group rows are
+    directories holding that producer's charts.
+    """
+    from dashboard.lib.loaders import load_artifact_catalog
+
+    catalog = load_artifact_catalog()
+    assert catalog["bank_slug"] == "mcb-demo"
+    assert len(catalog["artifacts"]) > 0
+    for row in catalog["artifacts"]:
+        path = snapshot_root() / row["snapshot_path"]
+        if row["kind"] == "png_group":
+            assert path.is_dir(), f"missing catalogued directory {path}"
+        else:
+            assert path.is_file(), f"missing catalogued file {path}"
+
+
+def test_loaders_use_catalog_paths(monkeypatch, tmp_path) -> None:
+    import dashboard.lib.loaders as loaders_mod
+    from dashboard.lib.loaders import artifact_snapshot_path
+
+    (tmp_path / "pacta").mkdir()
+    (tmp_path / "trisk" / "power").mkdir(parents=True)
+    (tmp_path / "pacta" / "m.csv").write_text("a,b\n1,2\n", encoding="utf-8")
+    (tmp_path / "trisk" / "power" / "t.csv").write_text("a,b\n3,4\n", encoding="utf-8")
+    (tmp_path / "artifact_catalog.json").write_text(
+        json.dumps({
+            "schema_version": 1,
+            "bank_slug": "test-bank",
+            "sectors": ["power"],
+            "artifacts": [
+                {"key": "matches", "group": "pacta", "scope": "engagement", "sector": None,
+                 "producer": "pacta_vietnam_scenario", "kind": "csv",
+                 "snapshot_path": "pacta/m.csv"},
+                {"key": "top_borrowers", "group": "trisk", "scope": "sector", "sector": "power",
+                 "producer": "trisk_sector_demo", "kind": "csv",
+                 "snapshot_path": "trisk/power/t.csv"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("PACTATRISK_SNAPSHOT_DIR", str(tmp_path))
+    loaders_mod._load_artifact_catalog_cached.clear()
+
+    assert artifact_snapshot_path("top_borrowers", "power") == tmp_path.resolve() / "trisk" / "power" / "t.csv"
+    # Only `matches` is in this catalog: the second PACTA key is a lookup miss.
+    with pytest.raises(KeyError):
+        load_pacta_alignment_tables()
+
+
+def test_missing_catalog_raises(monkeypatch, tmp_path) -> None:
+    import dashboard.lib.loaders as loaders_mod
+    from dashboard.lib.loaders import load_artifact_catalog
+
+    monkeypatch.setenv("PACTATRISK_SNAPSHOT_DIR", str(tmp_path))
+    loaders_mod._load_artifact_catalog_cached.clear()
+
+    with pytest.raises(FileNotFoundError, match="refresh_dashboard_data.R"):
+        load_artifact_catalog()
 
 
 # --- Wave 3 PHASE-02: report_catalog() reads the report_catalog.json sidecar --

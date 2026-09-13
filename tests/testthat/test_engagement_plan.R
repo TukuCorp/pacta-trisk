@@ -2,6 +2,7 @@ library(testthat)
 
 root <- project_root()
 source(file.path(root, "R", "engagement_config.R"))
+source(file.path(root, "R", "artifact_catalog.R"))
 source(file.path(root, "R", "step_registry.R"))
 source(file.path(root, "R", "engagement_plan.R"))
 
@@ -85,7 +86,21 @@ test_that("parse_engagement_cli honors --skip-intake", {
     trisk_sectors = c("power"),
     steps = character(0),
     inputs = list(raw_loanbook_csv = NULL, loanbook_csv = "data/vietnam_loanbook.csv"),
-    paths = list(snapshot_dir = "engagements/test-bank/snapshot"),
+    # The catalog needs every location key before it can derive a path, so a
+    # synthetic config carries the same key set a real config gets from
+    # .default_engagement_config() (only the values differ).
+    paths = list(
+      pacta_output_dir = "engagements/test-bank/output/pacta",
+      trisk_output_root = "engagements/test-bank/output/trisk",
+      trisk_input_root = "engagements/test-bank/output/trisk_inputs",
+      snapshot_dir = "engagements/test-bank/snapshot",
+      reports_dir = "engagements/test-bank/reports",
+      engagement_output_dir = "engagements/test-bank/output/engagement",
+      letters_output_dir = "engagements/test-bank/output/engagement_letters",
+      disclosure_output_dir = "engagements/test-bank/output/disclosure",
+      prioritization_output_dir = "engagements/test-bank/output/prioritization",
+      financed_emissions_output_dir = "engagements/test-bank/output/financed_emissions"
+    ),
     public_snapshot_allowed = FALSE
   )
   utils::modifyList(cfg, list(...))
@@ -313,6 +328,25 @@ test_that("plan banner names the engagement, config, and loanbook", {
   expect_true(grepl("test-bank", plan$banner, fixed = TRUE))
   expect_true(grepl("engagement_config.resolved.json", plan$banner, fixed = TRUE))
   expect_true(grepl("data/raw.csv", plan$banner, fixed = TRUE))
+})
+
+test_that("plan refuses a row_count_files entry that is not a catalogued Snapshot artifact", {
+  withr_wd <- setwd(root)
+  on.exit(setwd(withr_wd))
+  cfg <- load_engagement_config(file.path(root, "engagements", "mcb-demo", "engagement_config.json"))
+
+  cfg$row_count_files <- c(
+    "dashboard/data/trisk/power/company_trajectories_latest.csv",
+    "dashboard/data/nope.csv"
+  )
+  expect_error(
+    plan_engagement_run(cfg, .test_cli("--skip-intake")),
+    "row_count_files entry 'dashboard/data/nope.csv' is not a catalogued Snapshot artifact"
+  )
+
+  # The real config's six Snapshot paths are all catalogued, so it plans clean.
+  cfg <- load_engagement_config(file.path(root, "engagements", "mcb-demo", "engagement_config.json"))
+  expect_silent(plan_engagement_run(cfg, .test_cli("--skip-intake")))
 })
 
 test_that("materialize_resolved_config points the resolved loanbook at intake", {

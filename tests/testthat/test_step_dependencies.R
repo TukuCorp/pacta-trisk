@@ -2,6 +2,7 @@ library(testthat)
 
 root <- project_root()
 source(file.path(root, "R", "engagement_config.R"))
+source(file.path(root, "R", "artifact_catalog.R"))
 source(file.path(root, "R", "step_registry.R"))
 source(file.path(root, "R", "engagement_plan.R"))
 
@@ -111,4 +112,44 @@ test_that("every requires edge in the full MCB list is wired to a producer", {
   expect_true(length(required) > 0)
   expect_true(all(required %in% produced))
   expect_equal(validate_step_dependencies(steps, cfg), character(0))
+})
+
+test_that("registry dependencies are derived from the catalog, at real locations", {
+  withr_wd <- setwd(root)
+  on.exit(setwd(withr_wd))
+  cfg <- .mcb_cfg()
+  registry <- step_registry()
+  catalog <- artifact_catalog(cfg)
+
+  produced <- unique(unlist(lapply(names(registry), function(key) {
+    entry <- registry[[key]]
+    if (is.null(entry$produces_fn)) return(character(0))
+    entry$produces_fn(cfg)
+  })))
+  expect_true(length(produced) > 0)
+  expect_true(all(produced %in% catalog$path))
+
+  # 11 TRISK keys x 3 sectors, at the `_demo` locations TRISK actually writes.
+  trisk_produced <- registry[["trisk_sector_demo"]]$produces_fn(cfg)
+  expect_equal(length(trisk_produced), 33)
+  expect_true("synthesis_output/trisk/power_demo/top_borrowers_alignment_trisk.csv" %in% trisk_produced)
+  expect_equal(length(registry[["trisk_prepare_inputs"]]$produces_fn(cfg)), 12)
+
+  # A step the catalog names no Artifact for carries no derived closure.
+  expect_null(registry[["generate_vietnam_data"]]$produces_fn)
+  expect_null(registry[["record_history"]]$produces_fn)
+
+  expect_equal(
+    registry[["refresh_dashboard_data"]]$produces_fn(cfg),
+    "dashboard/data/trisk/manifest.csv"
+  )
+  expect_equal(
+    registry[["sector_prioritization"]]$requires_fn(cfg),
+    c(
+      "synthesis_output/vietnam/06_vn_ms_alignment_2030.csv",
+      "synthesis_output/trisk/power_demo/top_borrowers_alignment_trisk.csv",
+      "synthesis_output/trisk/cement_demo/top_borrowers_alignment_trisk.csv",
+      "synthesis_output/trisk/steel_demo/top_borrowers_alignment_trisk.csv"
+    )
+  )
 })

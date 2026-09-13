@@ -11,9 +11,11 @@ named list of step definitions, keyed by step name.
 }
 \description{
 Each entry is \code{list(script = character(1), args_fn = function(cfg, ctx) character())},
-optionally plus \code{produces_fn = function(cfg) character()} (files the step
-writes) and \code{requires_fn = function(cfg) character()} (files the step reads
-that another registry step produces).
+optionally plus \code{requires = character()} (Artifact keys this step reads that
+another registry step produces). \code{step_registry()} derives
+\code{produces_fn = function(cfg) character()} (files the step writes) from
+\code{artifact_catalog(cfg)} for every producer named there, and a \code{requires_fn}
+from the declared keys.
 \code{trisk_sector_demo} is special-cased in resolve_step_list() because it
 expands to one step per configured sector, not one step total.
 }

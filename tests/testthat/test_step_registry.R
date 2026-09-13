@@ -2,6 +2,7 @@ library(testthat)
 
 root <- project_root()
 source(file.path(root, "R", "engagement_config.R"))
+source(file.path(root, "R", "artifact_catalog.R"))
 source(file.path(root, "R", "step_registry.R"))
 
 # --- resolve_step_list(): flag-driven behavior (cfg$steps unset) -------------

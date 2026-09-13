@@ -1,0 +1,610 @@
+{
+  "schema_version": 1,
+  "bank_slug": "mcb-demo",
+  "sectors": ["power", "cement", "steel"],
+  "artifacts": [
+    {
+      "key": "matches",
+      "group": "pacta",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "pacta_vietnam_scenario",
+      "kind": "csv",
+      "snapshot_path": "pacta/02_vn_matched_prioritized.csv"
+    },
+    {
+      "key": "ms_company",
+      "group": "pacta",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "pacta_vietnam_scenario",
+      "kind": "csv",
+      "snapshot_path": "pacta/04_vn_ms_company.csv"
+    },
+    {
+      "key": "ms_portfolio",
+      "group": "pacta",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "pacta_vietnam_scenario",
+      "kind": "csv",
+      "snapshot_path": "pacta/04_vn_ms_portfolio.csv"
+    },
+    {
+      "key": "sda_portfolio",
+      "group": "pacta",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "pacta_vietnam_scenario",
+      "kind": "csv",
+      "snapshot_path": "pacta/05_vn_sda_portfolio.csv"
+    },
+    {
+      "key": "ms_alignment",
+      "group": "pacta",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "pacta_vietnam_scenario",
+      "kind": "csv",
+      "snapshot_path": "pacta/06_vn_ms_alignment_2030.csv"
+    },
+    {
+      "key": "sda_alignment",
+      "group": "pacta",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "pacta_vietnam_scenario",
+      "kind": "csv",
+      "snapshot_path": "pacta/06_vn_sda_alignment_2030.csv"
+    },
+    {
+      "key": "pacta_figures",
+      "group": "pacta",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "pacta_vietnam_scenario",
+      "kind": "png_group",
+      "snapshot_path": "pacta"
+    },
+    {
+      "key": "trisk_manifest",
+      "group": "snapshot",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "refresh_dashboard_data",
+      "kind": "csv",
+      "snapshot_path": "trisk/manifest.csv"
+    },
+    {
+      "key": "pipeline_manifest",
+      "group": "snapshot",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "run_engagement",
+      "kind": "json",
+      "snapshot_path": "pipeline_manifest.json"
+    },
+    {
+      "key": "financed_emissions",
+      "group": "analytics",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "financed_emissions",
+      "kind": "csv",
+      "snapshot_path": "analytics/financed_emissions.csv"
+    },
+    {
+      "key": "data_quality_summary",
+      "group": "analytics",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "financed_emissions",
+      "kind": "csv",
+      "snapshot_path": "analytics/data_quality_summary.csv"
+    },
+    {
+      "key": "target_registry",
+      "group": "analytics",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "generate_targets",
+      "kind": "csv",
+      "snapshot_path": "analytics/target_registry.csv"
+    },
+    {
+      "key": "sll_readiness",
+      "group": "analytics",
+      "scope": "engagement",
+      "sector": null,
+      "producer": "sll_readiness",
+      "kind": "csv",
+      "snapshot_path": "analytics/sll_readiness.csv"
+    },
+    {
+      "key": "assets",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/assets.csv"
+    },
+    {
+      "key": "financial_features",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/financial_features.csv"
+    },
+    {
+      "key": "carbon_price",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/ngfs_carbon_price.csv"
+    },
+    {
+      "key": "scenarios",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/scenarios.csv"
+    },
+    {
+      "key": "company_summary",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/company_summary.csv"
+    },
+    {
+      "key": "company_trajectories",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/company_trajectories_latest.csv"
+    },
+    {
+      "key": "npv_results",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/npv_results_latest.csv"
+    },
+    {
+      "key": "params",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/params_latest.csv"
+    },
+    {
+      "key": "pd_results",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/pd_results_latest.csv"
+    },
+    {
+      "key": "pd_summary",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/pd_summary.csv"
+    },
+    {
+      "key": "run_catalog",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/run_catalog.csv"
+    },
+    {
+      "key": "sensitivity_results",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/sensitivity_results.csv"
+    },
+    {
+      "key": "sensitivity_summary",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/sensitivity_summary.csv"
+    },
+    {
+      "key": "top_borrowers",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/power/top_borrowers_alignment_trisk.csv"
+    },
+    {
+      "key": "trisk_figures",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_sector_demo",
+      "kind": "png_group",
+      "snapshot_path": "trisk/power"
+    },
+    {
+      "key": "grid_scenarios",
+      "group": "grid",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_scenario_grid",
+      "kind": "csv",
+      "snapshot_path": "trisk/grid/power/scenarios.csv"
+    },
+    {
+      "key": "grid_borrower_results",
+      "group": "grid",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_scenario_grid",
+      "kind": "parquet",
+      "snapshot_path": "trisk/grid/power/borrower_results.parquet"
+    },
+    {
+      "key": "grid_meta",
+      "group": "grid",
+      "scope": "sector",
+      "sector": "power",
+      "producer": "trisk_scenario_grid",
+      "kind": "json",
+      "snapshot_path": "trisk/grid/power/grid_meta.json"
+    },
+    {
+      "key": "assets",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/assets.csv"
+    },
+    {
+      "key": "financial_features",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/financial_features.csv"
+    },
+    {
+      "key": "carbon_price",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/ngfs_carbon_price.csv"
+    },
+    {
+      "key": "scenarios",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/scenarios.csv"
+    },
+    {
+      "key": "company_summary",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/company_summary.csv"
+    },
+    {
+      "key": "company_trajectories",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/company_trajectories_latest.csv"
+    },
+    {
+      "key": "npv_results",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/npv_results_latest.csv"
+    },
+    {
+      "key": "params",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/params_latest.csv"
+    },
+    {
+      "key": "pd_results",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/pd_results_latest.csv"
+    },
+    {
+      "key": "pd_summary",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/pd_summary.csv"
+    },
+    {
+      "key": "run_catalog",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/run_catalog.csv"
+    },
+    {
+      "key": "sensitivity_results",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/sensitivity_results.csv"
+    },
+    {
+      "key": "sensitivity_summary",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/sensitivity_summary.csv"
+    },
+    {
+      "key": "top_borrowers",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/cement/top_borrowers_alignment_trisk.csv"
+    },
+    {
+      "key": "trisk_figures",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_sector_demo",
+      "kind": "png_group",
+      "snapshot_path": "trisk/cement"
+    },
+    {
+      "key": "grid_scenarios",
+      "group": "grid",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_scenario_grid",
+      "kind": "csv",
+      "snapshot_path": "trisk/grid/cement/scenarios.csv"
+    },
+    {
+      "key": "grid_borrower_results",
+      "group": "grid",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_scenario_grid",
+      "kind": "parquet",
+      "snapshot_path": "trisk/grid/cement/borrower_results.parquet"
+    },
+    {
+      "key": "grid_meta",
+      "group": "grid",
+      "scope": "sector",
+      "sector": "cement",
+      "producer": "trisk_scenario_grid",
+      "kind": "json",
+      "snapshot_path": "trisk/grid/cement/grid_meta.json"
+    },
+    {
+      "key": "assets",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/assets.csv"
+    },
+    {
+      "key": "financial_features",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/financial_features.csv"
+    },
+    {
+      "key": "carbon_price",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/ngfs_carbon_price.csv"
+    },
+    {
+      "key": "scenarios",
+      "group": "trisk_input",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_prepare_inputs",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/scenarios.csv"
+    },
+    {
+      "key": "company_summary",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/company_summary.csv"
+    },
+    {
+      "key": "company_trajectories",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/company_trajectories_latest.csv"
+    },
+    {
+      "key": "npv_results",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/npv_results_latest.csv"
+    },
+    {
+      "key": "params",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/params_latest.csv"
+    },
+    {
+      "key": "pd_results",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/pd_results_latest.csv"
+    },
+    {
+      "key": "pd_summary",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/pd_summary.csv"
+    },
+    {
+      "key": "run_catalog",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/run_catalog.csv"
+    },
+    {
+      "key": "sensitivity_results",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/sensitivity_results.csv"
+    },
+    {
+      "key": "sensitivity_summary",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/sensitivity_summary.csv"
+    },
+    {
+      "key": "top_borrowers",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "csv",
+      "snapshot_path": "trisk/steel/top_borrowers_alignment_trisk.csv"
+    },
+    {
+      "key": "trisk_figures",
+      "group": "trisk",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_sector_demo",
+      "kind": "png_group",
+      "snapshot_path": "trisk/steel"
+    },
+    {
+      "key": "grid_scenarios",
+      "group": "grid",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_scenario_grid",
+      "kind": "csv",
+      "snapshot_path": "trisk/grid/steel/scenarios.csv"
+    },
+    {
+      "key": "grid_borrower_results",
+      "group": "grid",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_scenario_grid",
+      "kind": "parquet",
+      "snapshot_path": "trisk/grid/steel/borrower_results.parquet"
+    },
+    {
+      "key": "grid_meta",
+      "group": "grid",
+      "scope": "sector",
+      "sector": "steel",
+      "producer": "trisk_scenario_grid",
+      "kind": "json",
+      "snapshot_path": "trisk/grid/steel/grid_meta.json"
+    }
+  ]
+}

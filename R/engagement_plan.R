@@ -165,6 +165,23 @@ plan_engagement_run <- function(cfg, cli) {
   )
   steps <- resolve_step_list(cfg, step_ctx)
   steps <- filter_step_list(steps, only = cli$only_steps, resume_from = cli$resume_from)
+
+  # The manifest records a row count per entry in cfg$row_count_files (Wave 1
+  # PHASE-05). Those entries are Snapshot Artifact paths spelled in the
+  # engagement config; the catalog is what decides whether a given path is a
+  # real catalogued Snapshot location, so a typo or a retired file is refused
+  # here rather than recorded as a count of nothing.
+  if (length(cfg$row_count_files) > 0) {
+    known <- stats::na.omit(artifact_catalog(cfg)$snapshot_path)
+    unknown <- setdiff(as.character(cfg$row_count_files), known)
+    if (length(unknown) > 0) {
+      stop(sprintf(
+        "plan_engagement_run: row_count_files entry '%s' is not a catalogued Snapshot artifact",
+        unknown[[1]]
+      ), call. = FALSE)
+    }
+  }
+
   dependency_warnings <- validate_step_dependencies(steps, cfg, strict = isTRUE(cli$strict_deps))
   if (length(dependency_warnings) > 0) {
     for (w in dependency_warnings) warning(w, call. = FALSE)
@@ -187,12 +204,9 @@ plan_engagement_run <- function(cfg, cli) {
 
   # Public engagements (mcb-demo) write the manifest alongside the public
   # snapshot; every other engagement keeps its manifest under its own
-  # engagements/<slug>/ tree (verbatim from scripts/run_engagement.R).
-  manifest_path <- if (isTRUE(cfg$public_snapshot_allowed)) {
-    file.path(cfg$paths$snapshot_dir, "pipeline_manifest.json")
-  } else {
-    file.path("engagements", cfg$bank_slug, "pipeline_manifest.json")
-  }
+  # engagements/<slug>/ tree. The rule lives on the catalog's
+  # `pipeline_manifest` row, which encodes both branches.
+  manifest_path <- artifact_path(cfg, "pipeline_manifest")
   # A --only-step / --resume-from run produces a manifest that describes
   # only the steps it ran (verbatim from scripts/run_engagement.R).
   run_is_partial <- length(cli$only_steps) > 0 || (!is.na(cli$resume_from) && nzchar(cli$resume_from))

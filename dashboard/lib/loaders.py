@@ -38,12 +38,13 @@ def analytics_dir() -> Path:
     return snapshot_root() / "analytics"
 
 
-def trisk_manifest() -> Path:
-    return trisk_dir() / "manifest.csv"
-
-
 def pipeline_manifest_path() -> Path:
     return snapshot_root() / "pipeline_manifest.json"
+
+
+def artifact_catalog_path() -> Path:
+    """The machine-readable Artifact catalog written by the snapshot step."""
+    return snapshot_root() / "artifact_catalog.json"
 
 
 def load_pipeline_manifest() -> dict | None:
@@ -77,47 +78,78 @@ def load_bytes(path: str | Path) -> bytes:
     return Path(path).read_bytes()
 
 
+@st.cache_data(show_spinner=False)
+def _load_artifact_catalog_cached(path: str) -> dict:
+    resolved = Path(path)
+    if not resolved.exists():
+        raise FileNotFoundError(
+            f"{resolved} not found: regenerate the snapshot with "
+            "Rscript scripts/refresh_dashboard_data.R --config <engagement config>"
+        )
+    return json.loads(resolved.read_text(encoding="utf-8"))
+
+
+def load_artifact_catalog(path: str | Path | None = None) -> dict:
+    """The Artifact catalog `scripts/refresh_dashboard_data.R` writes into the
+    snapshot from `R/artifact_catalog.R` (ADR-0001).
+
+    Every table path the app reads is resolved from this file instead of being
+    spelled here. A snapshot generated before the catalog existed has no
+    `artifact_catalog.json`; the error names the exact regeneration command.
+    """
+    resolved = Path(path) if path is not None else artifact_catalog_path()
+    return _load_artifact_catalog_cached(str(resolved))
+
+
+def artifact_snapshot_path(key: str, sector: str | None = None) -> Path:
+    """Absolute path of one catalogued Snapshot file.
+
+    `sector` selects the row for a sector-scoped Artifact; engagement-scoped
+    Artifacts have no sector, so passing one is a lookup miss, not a fallback.
+    """
+    for row in load_artifact_catalog().get("artifacts", []):
+        if row.get("key") != key or row.get("sector") != sector:
+            continue
+        return snapshot_root() / row["snapshot_path"]
+    raise KeyError(
+        f"artifact '{key}'"
+        + (f" sector '{sector}'" if sector is not None else "")
+        + " is not in artifact_catalog.json"
+    )
+
+
 def pacta_path(name: str) -> Path:
     return pacta_dir() / name
-
-
-def trisk_path(name: str) -> Path:
-    return trisk_dir() / name
-
-
-def trisk_sector_path(sector: str, name: str) -> Path:
-    return trisk_dir() / sector / name
-
-
-def reports_path(name: str) -> Path:
-    return reports_dir() / name
 
 
 def analytics_path(name: str) -> Path:
     return analytics_dir() / name
 
 
-# Filenames copied into <snapshot>/analytics/ by scripts/refresh_dashboard_data.R,
-# keyed by the name the app uses for each table.
-ANALYTICS_TABLES = {
-    "financed_emissions": "financed_emissions.csv",
-    "data_quality_summary": "data_quality_summary.csv",
-    "target_registry": "target_registry.csv",
-    "sll_readiness": "sll_readiness.csv",
-}
+# The analytics keys the snapshot may carry; each is resolved from the Artifact
+# catalog, so no filename is spelled here.
+ANALYTICS_TABLE_KEYS = (
+    "financed_emissions",
+    "data_quality_summary",
+    "target_registry",
+    "sll_readiness",
+)
 
 
 def load_analytics_tables() -> dict[str, pd.DataFrame]:
     """The Wave 3 analytics (PCAF inventory, target registry, SLL shortlist) as
     data rather than rendered HTML.
 
-    A file that is absent is omitted from the result rather than raising: an
+    A table that is absent is omitted from the result rather than raising: an
     engagement may not have run financed emissions, targets or the SLL screen,
     and an older snapshot predates the analytics/ directory entirely.
     """
     tables: dict[str, pd.DataFrame] = {}
-    for key, filename in ANALYTICS_TABLES.items():
-        path = analytics_path(filename)
+    for key in ANALYTICS_TABLE_KEYS:
+        try:
+            path = artifact_snapshot_path(key)
+        except (KeyError, FileNotFoundError, OSError):
+            continue
         if not path.exists():
             continue
         try:
@@ -127,19 +159,24 @@ def load_analytics_tables() -> dict[str, pd.DataFrame]:
     return tables
 
 
+# Page-facing key -> catalog key (DEC-002). The PACTA keys and their page names
+# are identical, so this list is one-to-one.
+PACTA_TABLE_KEYS = (
+    "matches",
+    "ms_company",
+    "ms_portfolio",
+    "sda_portfolio",
+    "ms_alignment",
+    "sda_alignment",
+)
+
+
 def load_pacta_alignment_tables() -> dict[str, pd.DataFrame]:
-    return {
-        "matches": load_csv(pacta_path("02_vn_matched_prioritized.csv")),
-        "ms_company": load_csv(pacta_path("04_vn_ms_company.csv")),
-        "ms_portfolio": load_csv(pacta_path("04_vn_ms_portfolio.csv")),
-        "sda_portfolio": load_csv(pacta_path("05_vn_sda_portfolio.csv")),
-        "ms_alignment": load_csv(pacta_path("06_vn_ms_alignment_2030.csv")),
-        "sda_alignment": load_csv(pacta_path("06_vn_sda_alignment_2030.csv")),
-    }
+    return {key: load_csv(artifact_snapshot_path(key)) for key in PACTA_TABLE_KEYS}
 
 
 def load_trisk_tables() -> dict[str, pd.DataFrame]:
-    manifest = load_csv(trisk_manifest())
+    manifest = load_csv(artifact_snapshot_path("trisk_manifest"))
     default_sector = manifest.iloc[0]["sector"]
     return {
         "manifest": manifest,
@@ -148,21 +185,30 @@ def load_trisk_tables() -> dict[str, pd.DataFrame]:
     }
 
 
+# Page-facing key -> catalog key (DEC-002). Two page contracts differ from the
+# catalog's semantic keys; the rest are one-to-one. Order is the order the page
+# has always received.
+TRISK_SECTOR_TABLE_KEYS = {
+    "assets": "assets",
+    "company_summary": "company_summary",
+    "company_trajectories_latest": "company_trajectories",
+    "npv_results": "npv_results",
+    "pd_results": "pd_results",
+    "pd_summary": "pd_summary",
+    "financial_features": "financial_features",
+    "carbon_price": "carbon_price",
+    "run_catalog": "run_catalog",
+    "scenarios": "scenarios",
+    "sensitivity_results": "sensitivity_results",
+    "sensitivity_summary": "sensitivity_summary",
+    "combined": "top_borrowers",
+}
+
+
 def load_trisk_sector_tables(sector: str) -> dict[str, pd.DataFrame]:
     return {
-        "assets": load_csv(trisk_sector_path(sector, "assets.csv")),
-        "company_summary": load_csv(trisk_sector_path(sector, "company_summary.csv")),
-        "company_trajectories_latest": load_csv(trisk_sector_path(sector, "company_trajectories_latest.csv")),
-        "npv_results": load_csv(trisk_sector_path(sector, "npv_results_latest.csv")),
-        "pd_results": load_csv(trisk_sector_path(sector, "pd_results_latest.csv")),
-        "pd_summary": load_csv(trisk_sector_path(sector, "pd_summary.csv")),
-        "financial_features": load_csv(trisk_sector_path(sector, "financial_features.csv")),
-        "carbon_price": load_csv(trisk_sector_path(sector, "ngfs_carbon_price.csv")),
-        "run_catalog": load_csv(trisk_sector_path(sector, "run_catalog.csv")),
-        "scenarios": load_csv(trisk_sector_path(sector, "scenarios.csv")),
-        "sensitivity_results": load_csv(trisk_sector_path(sector, "sensitivity_results.csv")),
-        "sensitivity_summary": load_csv(trisk_sector_path(sector, "sensitivity_summary.csv")),
-        "combined": load_csv(trisk_sector_path(sector, "top_borrowers_alignment_trisk.csv")),
+        page_key: load_csv(artifact_snapshot_path(catalog_key, sector))
+        for page_key, catalog_key in TRISK_SECTOR_TABLE_KEYS.items()
     }
 
 
@@ -172,10 +218,9 @@ def load_parquet(path: str | Path) -> pd.DataFrame:
 
 
 def load_trisk_grid(sector: str) -> dict[str, pd.DataFrame]:
-    grid_dir = trisk_dir() / "grid" / sector
     return {
-        "scenarios": load_csv(grid_dir / "scenarios.csv"),
-        "borrower_results": load_parquet(grid_dir / "borrower_results.parquet"),
+        "scenarios": load_csv(artifact_snapshot_path("grid_scenarios", sector)),
+        "borrower_results": load_parquet(artifact_snapshot_path("grid_borrower_results", sector)),
     }
 
 
